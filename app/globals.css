@@ -1,13 +1,17 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --bg-0: #0b0e17;
+  --bg-1: #12172a;
+  --accent-1: #7c5cff;
+  --accent-2: #38bdf8;
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-bg-strong: rgba(255, 255, 255, 0.09);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --text-0: #f5f6fb;
+  --text-1: rgba(245, 246, 251, 0.68);
+  --text-2: rgba(245, 246, 251, 0.42);
+  --radius-lg: 24px;
+  --radius-md: 14px;
+  --shadow-glass: 0 8px 40px rgba(0, 0, 0, 0.35);
 }
 
 html {
@@ -24,9 +28,14 @@ body {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-0);
+  background:
+    radial-gradient(60% 50% at 15% 10%, rgba(124, 92, 255, 0.35), transparent 60%),
+    radial-gradient(50% 45% at 90% 15%, rgba(56, 189, 248, 0.28), transparent 60%),
+    radial-gradient(70% 60% at 50% 100%, rgba(124, 92, 255, 0.18), transparent 60%),
+    linear-gradient(180deg, var(--bg-0), var(--bg-1));
+  background-attachment: fixed;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -42,8 +51,231 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+button,
+input {
+  font-family: inherit;
+}
+
+html {
+  color-scheme: dark;
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass);
+  backdrop-filter: blur(24px) saturate(140%);
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-0);
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  width: 100%;
+}
+
+.glass-input::placeholder {
+  color: var(--text-2);
+}
+
+.glass-input:focus {
+  border-color: rgba(124, 92, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  box-shadow: 0 6px 20px rgba(124, 92, 255, 0.35);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-ghost {
+  background: var(--glass-bg-strong);
+  color: var(--text-0);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
+}
+
+/* We use our own persisted Room chat panel instead of LiveKit's built-in
+   ephemeral one, so hide its default chat toggle + unread badge. */
+.lk-chat-toggle {
+  display: none !important;
+}
+
+/* Restyle LiveKit's control bar (Microphone/Camera/Share/Leave) to match the
+   glass theme instead of its default flat dark-grey buttons. */
+[data-lk-theme="default"] {
+  --lk-control-fg: var(--text-0) !important;
+  --lk-control-bg: rgba(124, 92, 255, 0.22) !important;
+  --lk-control-hover-bg: rgba(124, 92, 255, 0.36) !important;
+  --lk-control-active-bg: rgba(124, 92, 255, 0.55) !important;
+  --lk-control-active-hover-bg: rgba(124, 92, 255, 0.68) !important;
+  --lk-border-color: rgba(124, 92, 255, 0.32) !important;
+  --lk-border-radius: 12px !important;
+  --lk-accent-bg: var(--accent-1) !important;
+  --lk-accent2: var(--accent-2) !important;
+  --lk-danger: #ff5c7a !important;
+  --lk-danger-fg: #fff !important;
+  /* Our control bar padding (0.85rem) is taller than LiveKit's default
+     (0.75rem) that the built-in 69px height was calibrated for. Keep this
+     in sync with reality so anything positioned off of it (e.g. the
+     reactions bar) actually clears the buttons instead of sitting on them. */
+  --lk-control-bar-height: 78px !important;
+}
+
+.lk-control-bar {
+  gap: 0.6rem !important;
+  padding: 0.85rem !important;
+  border-top: none !important;
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(24px) saturate(140%) !important;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.25) !important;
+}
+
+.lk-button,
+.lk-disconnect-button,
+.lk-chat-toggle,
+.lk-start-audio-button {
+  border: 1px solid var(--lk-border-color) !important;
+  background-color: var(--lk-control-bg) !important;
+  color: var(--lk-control-fg) !important;
+  backdrop-filter: blur(10px);
+  transition: background-color 0.15s ease, background-image 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lk-button:not(:disabled):hover,
+.lk-chat-toggle:not(:disabled):hover,
+.lk-start-audio-button:not(:disabled):hover {
+  background-color: var(--lk-control-hover-bg) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(124, 92, 255, 0.25);
+}
+
+.lk-button[aria-pressed="true"],
+.lk-chat-toggle[aria-pressed="true"] {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2)) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+
+.lk-disconnect-button {
+  background: linear-gradient(135deg, #ff5c7a, #ff3d5c) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(255, 61, 92, 0.3);
+}
+
+.lk-disconnect-button:not(:disabled):hover {
+  background: linear-gradient(135deg, #ff5c7a, #ff3d5c) !important;
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow: 0 6px 20px rgba(255, 61, 92, 0.4);
+}
+
+.lk-button[data-lk-source="screen_share"][data-lk-enabled="true"] {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2)) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.lk-button-menu::after {
+  opacity: 0.7;
+}
+
+.lk-device-menu {
+  background: rgba(18, 20, 32, 0.9) !important;
+  backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-glass);
+  /* LiveKit ships this at z-index: 5, which sits underneath our reactions
+     bar (z-index: 20) since both are absolutely positioned just above the
+     control bar — the reactions pill was visually blocking this dropdown. */
+  z-index: 45 !important;
+}
+
+/* Mirror the local participant's own camera preview by default (self-view
+   convention), scoped to the camera source so screen shares aren't flipped. */
+[data-lk-local-participant] video[data-lk-source="camera"] {
+  transform: scaleX(-1);
+}
+.marvie-no-mirror [data-lk-local-participant] video[data-lk-source="camera"] {
+  transform: none;
+}
+
+/* Side panels (chat/people/polls/whiteboard/breakout/background) sit next to
+   the video on desktop, but a fixed pixel width would crush or overflow the
+   video area on a phone screen. Below 720px they become a full-screen
+   overlay on top of the video instead of a flex sibling squeezing it. */
+.marvie-panel {
+  width: var(--panel-width, 300px);
+  max-width: calc(100vw - 1.5rem);
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .marvie-panel {
+    position: absolute;
+    inset: 0.75rem;
+    width: auto;
+    max-width: none;
+    z-index: 30;
+    margin: 0 !important;
+  }
+
+  .marvie-header-actions {
+    gap: 0.35rem !important;
+  }
+
+  .marvie-header-actions button {
+    padding: 0.5rem 0.7rem !important;
+    font-size: 0.82rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .marvie-extra-controls {
+    top: 8px !important;
+    right: 8px !important;
+  }
+
+  .marvie-extra-controls button {
+    padding: 0.35rem 0.5rem !important;
+    font-size: 0.72rem !important;
   }
 }

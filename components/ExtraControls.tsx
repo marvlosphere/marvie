@@ -1,0 +1,169 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocalParticipant, useRoomContext } from "@livekit/components-react";
+
+function isTypingTarget(el: EventTarget | null) {
+  if (!(el instanceof HTMLElement)) return false;
+  const tag = el.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
+}
+
+export default function ExtraControls({
+  mirrored,
+  onToggleMirror,
+}: {
+  mirrored: boolean;
+  onToggleMirror: () => void;
+}) {
+  const room = useRoomContext();
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
+  const [recording, setRecording] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  // Most mobile browsers (Android Chrome, iOS Safari) don't implement the
+  // Screen Capture API at all, so LiveKit's own control bar silently omits
+  // the button there. Surface an explanation instead of letting it look
+  // like the feature just went missing.
+  const canScreenShare =
+    typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
+  const [screenShareNotice, setScreenShareNotice] = useState(false);
+
+  const togglePip = useCallback(async () => {
+    const videos = Array.from(document.querySelectorAll("video")) as HTMLVideoElement[];
+    const remote = videos.find((v) => !v.closest("[data-lk-local-participant]") && v.readyState >= 2);
+    const target = remote ?? videos.find((v) => v.readyState >= 2);
+    if (!target) return;
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else {
+        await target.requestPictureInPicture();
+      }
+    } catch {
+      // PiP unsupported or blocked; silently ignore
+    }
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+        // @ts-expect-error non-standard but supported in Chromium
+        preferCurrentTab: true,
+      });
+      chunksRef.current = [];
+      const recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `marvie-call-${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        stream.getTracks().forEach((t) => t.stop());
+        setRecording(false);
+      };
+      stream.getVideoTracks()[0].addEventListener("ended", () => recorder.stop());
+      recorder.start();
+      recorderRef.current = recorder;
+      setRecording(true);
+    } catch {
+      // user cancelled the share picker; not an error worth surfacing
+    }
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    recorderRef.current?.stop();
+  }, []);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "m" || e.key === "M") {
+        localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+      } else if (e.key === "v" || e.key === "V") {
+        localParticipant.setCameraEnabled(!isCameraEnabled);
+      } else if (e.key === "s" || e.key === "S") {
+        localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
+      } else if (e.key === "p" || e.key === "P") {
+        togglePip();
+      } else if (e.key === "l" || e.key === "L") {
+        room.disconnect();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled, togglePip, room]);
+
+  return (
+    <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+      {!canScreenShare && (
+        <div style={{ position: "relative" }}>
+          <button
+            className="btn-ghost"
+            type="button"
+            onClick={() => setScreenShareNotice((v) => !v)}
+            title="Screen share unavailable on this browser"
+          >
+            Screen share
+          </button>
+          {screenShareNotice && (
+            <div
+              className="glass-card"
+              style={{
+                position: "absolute",
+                top: "calc(100% + 8px)",
+                right: 0,
+                width: "min(84vw, 260px)",
+                padding: "0.75rem 0.9rem",
+                borderRadius: 12,
+                fontSize: "0.8rem",
+                lineHeight: 1.4,
+                zIndex: 60,
+              }}
+            >
+              Screen sharing isn&apos;t supported by this browser. Try Chrome, Edge, or Firefox on a
+              desktop/laptop to share your screen.
+              <button
+                className="btn-ghost"
+                type="button"
+                onClick={() => setScreenShareNotice(false)}
+                style={{ display: "block", marginTop: "0.5rem", padding: "0.3rem 0.6rem", fontSize: "0.75rem" }}
+              >
+                Got it
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      <button className="btn-ghost" type="button" onClick={togglePip} title="Picture-in-picture (P)">
+        PiP
+      </button>
+      <button
+        className="btn-ghost"
+        type="button"
+        onClick={onToggleMirror}
+        title="Mirror my camera preview"
+        style={mirrored ? undefined : { background: "rgba(255,255,255,0.18)" }}
+      >
+        {mirrored ? "Mirrored" : "Not mirrored"}
+      </button>
+      <button
+        className="btn-ghost"
+        type="button"
+        onClick={recording ? stopRecording : startRecording}
+        title="Record this tab locally"
+        style={recording ? { background: "rgba(239,68,68,0.35)" } : undefined}
+      >
+        {recording ? "Stop recording" : "Record"}
+      </button>
+    </div>
+  );
+}
