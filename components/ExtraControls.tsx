@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalParticipant, useRoomContext } from "@livekit/components-react";
+import { isNativeAndroid, startNativeScreenShare, stopNativeScreenShare } from "@/lib/nativeScreenShare";
 
 function isTypingTarget(el: EventTarget | null) {
   if (!(el instanceof HTMLElement)) return false;
@@ -24,11 +25,36 @@ export default function ExtraControls({
 
   // Most mobile browsers (Android Chrome, iOS Safari) don't implement the
   // Screen Capture API at all, so LiveKit's own control bar silently omits
-  // the button there. Surface an explanation instead of letting it look
-  // like the feature just went missing.
+  // the button there. On Android inside the native Marvie app, a plugin
+  // bridges in real screen share via LiveKit's Android SDK instead (see
+  // ScreenSharePlugin.kt) — everywhere else, surface an explanation rather
+  // than letting the feature just look missing.
   const canScreenShare =
     typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
   const [screenShareNotice, setScreenShareNotice] = useState(false);
+  const nativeAndroid = isNativeAndroid();
+  const [nativeSharing, setNativeSharing] = useState(false);
+  const [nativeShareBusy, setNativeShareBusy] = useState(false);
+
+  const toggleNativeScreenShare = useCallback(async () => {
+    if (nativeShareBusy) return;
+    setNativeShareBusy(true);
+    try {
+      if (nativeSharing) {
+        await stopNativeScreenShare();
+        setNativeSharing(false);
+      } else {
+        await startNativeScreenShare(room.name, localParticipant.identity);
+        setNativeSharing(true);
+      }
+    } catch {
+      // Most likely the user declined the screen-capture consent dialog;
+      // not worth surfacing as a hard error.
+      setNativeSharing(false);
+    } finally {
+      setNativeShareBusy(false);
+    }
+  }, [nativeSharing, nativeShareBusy, room.name, localParticipant.identity]);
 
   const togglePip = useCallback(async () => {
     const videos = Array.from(document.querySelectorAll("video")) as HTMLVideoElement[];
@@ -104,7 +130,18 @@ export default function ExtraControls({
 
   return (
     <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-      {!canScreenShare && (
+      {nativeAndroid ? (
+        <button
+          className="btn-ghost"
+          type="button"
+          onClick={toggleNativeScreenShare}
+          disabled={nativeShareBusy}
+          title="Share your screen"
+          style={nativeSharing ? { background: "rgba(124, 92, 255, 0.35)" } : undefined}
+        >
+          {nativeSharing ? "Stop sharing" : "Share screen"}
+        </button>
+      ) : !canScreenShare ? (
         <div style={{ position: "relative" }}>
           <button
             className="btn-ghost"
@@ -142,7 +179,7 @@ export default function ExtraControls({
             </div>
           )}
         </div>
-      )}
+      ) : null}
       <button className="btn-ghost" type="button" onClick={togglePip} title="Picture-in-picture (P)">
         PiP
       </button>
