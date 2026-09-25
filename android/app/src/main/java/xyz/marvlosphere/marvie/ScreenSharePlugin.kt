@@ -13,6 +13,7 @@ import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
 import io.livekit.android.LiveKit
 import io.livekit.android.room.Room
+import io.livekit.android.room.track.screencapture.ScreenCaptureParams
 import kotlinx.coroutines.launch
 
 /**
@@ -78,7 +79,7 @@ class ScreenSharePlugin : Plugin() {
         lifecycleOwner.lifecycleScope.launch {
             try {
                 newRoom.connect(serverUrl, token)
-                newRoom.localParticipant.setScreenShareEnabled(true, projectionData)
+                newRoom.localParticipant.setScreenShareEnabled(true, ScreenCaptureParams(projectionData))
                 val ret = JSObject()
                 ret.put("started", true)
                 call.resolve(ret)
