@@ -17,7 +17,8 @@ import io.livekit.android.room.Room
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.screencapture.ScreenCaptureParams
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 /**
@@ -103,8 +104,8 @@ class ScreenSharePlugin : Plugin() {
     // since this plugin's Room is a second, separate participant the
     // WebView's `room` object doesn't control.
     private fun watchForOtherScreenShares(activeRoom: Room, lifecycleOwner: LifecycleOwner) {
-        watchJob = lifecycleOwner.lifecycleScope.launch {
-            activeRoom.events.collect { event ->
+        watchJob = activeRoom.events
+            .onEach { event ->
                 if (
                     event is RoomEvent.TrackPublished &&
                     event.publication.source == Track.Source.SCREEN_SHARE &&
@@ -113,7 +114,7 @@ class ScreenSharePlugin : Plugin() {
                     lifecycleOwner.lifecycleScope.launch { stopInternal() }
                 }
             }
-        }
+            .launchIn(lifecycleOwner.lifecycleScope)
     }
 
     @PluginMethod
