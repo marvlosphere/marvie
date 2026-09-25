@@ -12,8 +12,11 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
 import io.livekit.android.LiveKit
+import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
+import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.screencapture.ScreenCaptureParams
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -29,6 +32,7 @@ import kotlinx.coroutines.launch
 @CapacitorPlugin(name = "ScreenShare")
 class ScreenSharePlugin : Plugin() {
     private var room: Room? = null
+    private var watchJob: Job? = null
 
     @PluginMethod
     fun start(call: PluginCall) {
@@ -80,6 +84,7 @@ class ScreenSharePlugin : Plugin() {
             try {
                 newRoom.connect(serverUrl, token)
                 newRoom.localParticipant.setScreenShareEnabled(true, ScreenCaptureParams(projectionData))
+                watchForOtherScreenShares(newRoom, lifecycleOwner)
                 val ret = JSObject()
                 ret.put("started", true)
                 call.resolve(ret)
@@ -89,31 +94,53 @@ class ScreenSharePlugin : Plugin() {
         }
     }
 
+    // Only one screen share should be active in a room at a time, like
+    // Google Meet — if anyone else (including this same app running on
+    // another device) starts sharing while we are, stop our own instead of
+    // leaving two simultaneous shares. The web app enforces the same rule
+    // independently for its own LiveKit connection (see ExtraControls.tsx),
+    // since this plugin's Room is a second, separate participant the
+    // WebView's `room` object doesn't control.
+    private fun watchForOtherScreenShares(activeRoom: Room, lifecycleOwner: LifecycleOwner) {
+        watchJob = lifecycleOwner.lifecycleScope.launch {
+            activeRoom.events.collect { event ->
+                if (
+                    event is RoomEvent.TrackPublished &&
+                    event.publication.source == Track.Source.SCREEN_SHARE &&
+                    event.participant.identity != activeRoom.localParticipant.identity
+                ) {
+                    lifecycleOwner.lifecycleScope.launch { stopInternal() }
+                }
+            }
+        }
+    }
+
     @PluginMethod
     fun stop(call: PluginCall) {
-        val currentRoom = room
-        if (currentRoom == null) {
-            call.resolve()
-            return
-        }
-
         val lifecycleOwner = activity as? LifecycleOwner
         if (lifecycleOwner == null) {
-            currentRoom.disconnect()
+            room?.disconnect()
             room = null
             call.resolve()
             return
         }
 
         lifecycleOwner.lifecycleScope.launch {
-            try {
-                currentRoom.localParticipant.setScreenShareEnabled(false)
-            } catch (e: Exception) {
-                // Best-effort — still disconnect below so the room doesn't leak.
-            }
-            currentRoom.disconnect()
-            room = null
+            stopInternal()
             call.resolve()
         }
+    }
+
+    private suspend fun stopInternal() {
+        watchJob?.cancel()
+        watchJob = null
+        val currentRoom = room ?: return
+        try {
+            currentRoom.localParticipant.setScreenShareEnabled(false)
+        } catch (e: Exception) {
+            // Best-effort — still disconnect below so the room doesn't leak.
+        }
+        currentRoom.disconnect()
+        room = null
     }
 }

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalParticipant, useRoomContext } from "@livekit/components-react";
+import { RoomEvent, Track } from "livekit-client";
+import type { RemoteParticipant, RemoteTrackPublication } from "livekit-client";
 import { isNativeAndroid, startNativeScreenShare, stopNativeScreenShare } from "@/lib/nativeScreenShare";
 
 function isTypingTarget(el: EventTarget | null) {
@@ -55,6 +57,28 @@ export default function ExtraControls({
       setNativeShareBusy(false);
     }
   }, [nativeSharing, nativeShareBusy, room.name, localParticipant.identity]);
+
+  // Only one screen share at a time in a room, like Google Meet — if anyone
+  // else starts sharing while this browser is, stop this one rather than
+  // leaving two simultaneous shares. The native Android plugin enforces the
+  // same rule independently on its own LiveKit connection (see
+  // ScreenSharePlugin.kt), since that's a second, separate participant this
+  // page's `room` doesn't control.
+  useEffect(() => {
+    function stopIfSomeoneElseIsNowSharing(publication: RemoteTrackPublication, participant: RemoteParticipant) {
+      if (
+        publication.source === Track.Source.ScreenShare &&
+        participant.identity !== localParticipant.identity &&
+        localParticipant.isScreenShareEnabled
+      ) {
+        localParticipant.setScreenShareEnabled(false);
+      }
+    }
+    room.on(RoomEvent.TrackPublished, stopIfSomeoneElseIsNowSharing);
+    return () => {
+      room.off(RoomEvent.TrackPublished, stopIfSomeoneElseIsNowSharing);
+    };
+  }, [room, localParticipant]);
 
   const togglePip = useCallback(async () => {
     const videos = Array.from(document.querySelectorAll("video")) as HTMLVideoElement[];
