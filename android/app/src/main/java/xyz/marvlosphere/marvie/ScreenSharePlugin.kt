@@ -13,12 +13,11 @@ import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
 import io.livekit.android.LiveKit
 import io.livekit.android.events.RoomEvent
+import io.livekit.android.events.collect
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.screencapture.ScreenCaptureParams
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 /**
@@ -104,8 +103,13 @@ class ScreenSharePlugin : Plugin() {
     // since this plugin's Room is a second, separate participant the
     // WebView's `room` object doesn't control.
     private fun watchForOtherScreenShares(activeRoom: Room, lifecycleOwner: LifecycleOwner) {
-        watchJob = activeRoom.events
-            .onEach { event ->
+        // Room.events is LiveKit's own EventListenable<RoomEvent>, not a plain
+        // kotlinx Flow, so it needs LiveKit's own collect extension (imported
+        // above) rather than kotlinx.coroutines.flow.collect/onEach — that
+        // extension's collect() never returns, so the cancellable handle we
+        // keep is the outer launch's Job, not collect()'s own return value.
+        watchJob = lifecycleOwner.lifecycleScope.launch {
+            activeRoom.events.collect { event ->
                 if (
                     event is RoomEvent.TrackPublished &&
                     event.publication.source == Track.Source.SCREEN_SHARE &&
@@ -114,7 +118,7 @@ class ScreenSharePlugin : Plugin() {
                     lifecycleOwner.lifecycleScope.launch { stopInternal() }
                 }
             }
-            .launchIn(lifecycleOwner.lifecycleScope)
+        }
     }
 
     @PluginMethod
