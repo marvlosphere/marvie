@@ -8,7 +8,7 @@ Live at: https://marviecall.vercel.app
 
 - Text, audio, video calls (LiveKit Cloud)
 - End-to-end encrypted media (E2EE via a shared key in the invite link's URL fragment — never sent to the server; Chromium browsers only, see Limitations)
-- Persistent, realtime room chat (Supabase Postgres + Realtime)
+- Persistent, realtime room chat (Supabase Postgres + Realtime) 
 - Installable as a mobile/desktop app (PWA — manifest + service worker)
 - Waiting room: host can require approval to join; pending requests show live with Admit/Deny
 - Host + co-host roles: host can mint a co-host invite link (`?cohost=...`) that grants the same moderation powers
