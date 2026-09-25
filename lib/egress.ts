@@ -68,6 +68,59 @@ export async function startRoomRecording(roomName: string): Promise<void> {
   }
 }
 
+// LiveKit hard-caps file egress at 3 hours regardless of plan. Heartbeats
+// arrive roughly every 20 minutes per participant (see RoomHeartbeat.tsx),
+// so checking at 2h20m elapsed leaves a 20min+ margin even in the unlucky
+// case where the *next* heartbeat is the one that finally notices — without
+// this margin, detection latency alone could push the actual rotation past
+// LiveKit's cutoff and lose the tail of the call entirely.
+const RECORDING_ROTATE_AFTER_MS = 2 * 60 * 60 * 1000 + 20 * 60 * 1000;
+
+/** Called from the heartbeat endpoint. If this room's current recording is
+ * approaching LiveKit's 3-hour file cap, stops it and immediately starts a
+ * fresh one (a new file/egress) so long calls keep recording in segments
+ * instead of silently cutting off. Never throws. */
+export async function rotateRoomRecordingIfNeeded(roomName: string): Promise<void> {
+  const client = getEgressClient();
+  const s3 = getS3Upload();
+  if (!client || !s3) return;
+
+  try {
+    const supabase = createSupabaseClient();
+    const { data: roomRow } = await supabase.from("rooms").select("egress_id").eq("name", roomName).maybeSingle();
+    const egressId = roomRow?.egress_id;
+    if (!egressId) return;
+
+    const { data: recording } = await supabase
+      .from("recordings")
+      .select("started_at")
+      .eq("egress_id", egressId)
+      .maybeSingle();
+    if (!recording) return;
+
+    const elapsed = Date.now() - new Date(recording.started_at).getTime();
+    if (elapsed < RECORDING_ROTATE_AFTER_MS) return;
+
+    // Multiple participants' heartbeats can land within the same window —
+    // this conditional update only succeeds for whichever request gets
+    // there first (it only matches while egress_id still equals the value
+    // we just read), so a second concurrent heartbeat sees 0 rows affected
+    // and backs off instead of rotating twice.
+    const { data: claimed } = await supabase
+      .from("rooms")
+      .update({ egress_id: null })
+      .eq("name", roomName)
+      .eq("egress_id", egressId)
+      .select();
+    if (!claimed || claimed.length === 0) return;
+
+    await stopRoomRecording(roomName, egressId);
+    await startRoomRecording(roomName);
+  } catch (err) {
+    await logError("egress/rotate", err, { roomName });
+  }
+}
+
 /** Stops an active egress job and marks the recording as completed.
  * Never throws. */
 export async function stopRoomRecording(roomName: string, egressId: string): Promise<void> {
