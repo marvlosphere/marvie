@@ -425,7 +425,7 @@ export default function RoomPage({
   const [locked, setLocked] = useState(false);
   const [panel, setPanel] = useState<Panel>(null);
   const [keyReady, setKeyReady] = useState(false);
-  const [mirrored, setMirrored] = useState(true);
+  const [mirrored, setMirrored] = useState(false);
   const [overlayControlsVisible, setOverlayControlsVisible] = useState(true);
   const overlayHideTimerRef = useRef<number | null>(null);
 
