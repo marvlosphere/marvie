@@ -9,6 +9,7 @@ import { ExternalE2EEKeyProvider, isE2EESupported } from "livekit-client";
 import RoomChat from "@/components/RoomChat";
 import ModerationPanel from "@/components/ModerationPanel";
 import MergedControlBar from "@/components/MergedControlBar";
+import RaisedHandsOverlay from "@/components/RaisedHandsOverlay";
 import EffectsPanel from "@/components/EffectsPanel";
 import Polls from "@/components/Polls";
 import Whiteboard from "@/components/Whiteboard";
@@ -676,6 +677,7 @@ export default function RoomPage({
         <RoomHeartbeat roomName={roomName} />
         <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
           <VideoConference />
+          <RaisedHandsOverlay raisedHands={raisedHands} />
           <MergedControlBar
             senderName={name}
             raisedHands={raisedHands}

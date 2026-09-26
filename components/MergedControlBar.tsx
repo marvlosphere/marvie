@@ -143,7 +143,9 @@ export default function MergedControlBar({
       }, 2200);
       const payload: ReactionPayload = { type: "emoji", emoji, from: senderName };
       send(new TextEncoder().encode(JSON.stringify(payload)), { reliable: true });
-      setOpenPopover(null);
+      // Deliberately doesn't close the tray — sending one reaction shouldn't
+      // force you to reopen it to send another. The outside-click backdrop
+      // still closes it once you're done.
     },
     [send, senderName]
   );
@@ -242,16 +244,53 @@ export default function MergedControlBar({
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: true,
         // @ts-expect-error non-standard but supported in Chromium
         preferCurrentTab: true,
       });
+
+      // Tab-audio capture alone only picks up what plays back through this
+      // page — everyone else's voice (their <audio>/<video> elements), but
+      // NOT the local microphone, since your own mic is never looped back
+      // into the page's own audio output (that would cause echo). Mixing in
+      // a direct mic capture is the only way to get "both mine and other
+      // speakers" into one recording.
+      let micStream: MediaStream | null = null;
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch {
+        // Mic unavailable/denied — fall back to tab-audio-only rather than
+        // failing the whole recording.
+      }
+
+      let mixedAudioTrack: MediaStreamTrack | null = null;
+      let audioContext: AudioContext | null = null;
+      if (micStream && displayStream.getAudioTracks().length > 0) {
+        audioContext = new AudioContext();
+        const destination = audioContext.createMediaStreamDestination();
+        audioContext.createMediaStreamSource(displayStream).connect(destination);
+        audioContext.createMediaStreamSource(micStream).connect(destination);
+        mixedAudioTrack = destination.stream.getAudioTracks()[0];
+      } else if (micStream) {
+        mixedAudioTrack = micStream.getAudioTracks()[0];
+      }
+
+      const recordedStream = new MediaStream([
+        ...displayStream.getVideoTracks(),
+        ...(mixedAudioTrack ? [mixedAudioTrack] : displayStream.getAudioTracks()),
+      ]);
+
       chunksRef.current = [];
-      const recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+      const recorder = new MediaRecorder(recordedStream, { mimeType: "video/webm" });
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      const cleanup = () => {
+        displayStream.getTracks().forEach((t) => t.stop());
+        micStream?.getTracks().forEach((t) => t.stop());
+        audioContext?.close().catch(() => {});
       };
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: "video/webm" });
@@ -261,10 +300,10 @@ export default function MergedControlBar({
         a.download = `marvie-call-${Date.now()}.webm`;
         a.click();
         URL.revokeObjectURL(url);
-        stream.getTracks().forEach((t) => t.stop());
+        cleanup();
         setRecording(false);
       };
-      stream.getVideoTracks()[0].addEventListener("ended", () => recorder.stop());
+      displayStream.getVideoTracks()[0].addEventListener("ended", () => recorder.stop());
       recorder.start();
       recorderRef.current = recorder;
       setRecording(true);
@@ -284,6 +323,51 @@ export default function MergedControlBar({
       document.documentElement.requestFullscreen().catch(() => {});
     }
   }, []);
+
+  // Auto-hide the control bar in full screen after a few seconds of no
+  // mouse/touch/keyboard activity, like Google Meet/YouTube — otherwise it
+  // permanently occupies part of the "true 100% full screen" the header/
+  // carousel hiding above was meant to achieve. Any activity brings it back
+  // immediately; it's also forced visible whenever a popover from this bar
+  // is open, so you're never fighting the timer mid-interaction.
+  const [controlsHidden, setControlsHidden] = useState(false);
+  const hideTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isFullscreen) {
+      setControlsHidden(false);
+      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+      return;
+    }
+    function scheduleHide() {
+      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = window.setTimeout(() => setControlsHidden(true), 3000);
+    }
+    function showControls() {
+      setControlsHidden(false);
+      scheduleHide();
+    }
+    showControls();
+    window.addEventListener("mousemove", showControls);
+    window.addEventListener("touchstart", showControls);
+    window.addEventListener("keydown", showControls);
+    return () => {
+      window.removeEventListener("mousemove", showControls);
+      window.removeEventListener("touchstart", showControls);
+      window.removeEventListener("keydown", showControls);
+      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+    };
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    document.body.classList.toggle(
+      "marvie-controls-hidden",
+      isFullscreen && controlsHidden && !openPopover
+    );
+    return () => {
+      document.body.classList.remove("marvie-controls-hidden");
+    };
+  }, [isFullscreen, controlsHidden, openPopover]);
 
   useEffect(() => {
     function onFullscreenChange() {

@@ -150,6 +150,7 @@ export async function GET(req: NextRequest) {
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity,
+      name: displayName,
       ttl: "10h",
     });
     at.addGrant({

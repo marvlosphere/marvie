@@ -273,6 +273,48 @@ body.marvie-focus-mode .lk-carousel {
   display: none !important;
 }
 
+/* Auto-hides the control bar itself in full screen after a few seconds of
+   no activity (MergedControlBar toggles this class), so full screen is
+   actually edge-to-edge instead of permanently reserving a strip at the
+   bottom. Opacity+pointer-events (not display:none) so it can fade instead
+   of popping, and so a stray click during the fade-out can't land on a
+   button that's about to disappear. */
+body.marvie-controls-hidden .lk-control-bar {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.lk-control-bar {
+  transition: opacity 0.25s ease !important;
+}
+
+/* Raised-hand indicator appended directly onto a participant's tile by
+   RaisedHandsOverlay (LiveKit's own VideoConference owns that DOM, so there's
+   no React slot to render into). */
+.marvie-raised-hand-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 5;
+  font-size: 1.1rem;
+  line-height: 1;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 999px;
+  padding: 0.35rem 0.45rem;
+  pointer-events: none;
+  animation: marvie-hand-wave 1s ease-in-out infinite;
+}
+
+@keyframes marvie-hand-wave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-14deg);
+  }
+}
+
 .lk-device-menu {
   background: rgba(18, 20, 32, 0.9) !important;
   backdrop-filter: blur(20px) saturate(140%);
@@ -318,6 +360,33 @@ body.marvie-focus-mode .lk-carousel {
   width: var(--panel-width, 300px);
   max-width: calc(100vw - 1.5rem);
   flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  /* On a narrow phone (esp. inside an in-app browser like WhatsApp's, which
+     shaves off extra chrome), the full row — mic+dropdown, camera+dropdown,
+     share, emoji, hand, more, leave — is wider than the screen at the
+     desktop padding/gap, clipping the trailing buttons (leave included)
+     instead of wrapping. Tightening spacing buys back room; anything still
+     left over scrolls horizontally instead of getting cut off silently. */
+  .lk-control-bar {
+    gap: 0.3rem !important;
+    padding: 0.6rem 0.5rem !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    justify-content: flex-start !important;
+    scrollbar-width: none !important;
+  }
+
+  .lk-control-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lk-control-bar .lk-button,
+  .lk-control-bar .lk-disconnect-button {
+    flex-shrink: 0;
+    padding: 0.5rem 0.65rem !important;
+  }
 }
 
 @media (max-width: 720px) {
