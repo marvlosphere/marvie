@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.2",
     "@livekit/components-react": "^2.9.23",
     "@livekit/components-styles": "^1.2.0",

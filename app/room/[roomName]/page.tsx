@@ -7,9 +7,7 @@ import { LiveKitRoom, VideoConference } from "@livekit/components-react";
 import { ExternalE2EEKeyProvider, isE2EESupported } from "livekit-client";
 import RoomChat from "@/components/RoomChat";
 import ModerationPanel from "@/components/ModerationPanel";
-import Reactions from "@/components/Reactions";
-import ExtraControls from "@/components/ExtraControls";
-import AutoHideControls from "@/components/AutoHideControls";
+import MergedControlBar from "@/components/MergedControlBar";
 import EffectsPanel from "@/components/EffectsPanel";
 import Polls from "@/components/Polls";
 import Whiteboard from "@/components/Whiteboard";
@@ -23,13 +21,6 @@ import { usePendingJoinRequests } from "@/hooks/usePendingJoinRequests";
 import JoinRequestToast from "@/components/JoinRequestToast";
 
 type Panel = "chat" | "people" | "polls" | "whiteboard" | "breakout" | "effects" | null;
-
-const HEADER_OVERLAY_STYLE: React.CSSProperties = {
-  position: "absolute",
-  top: 12,
-  right: 12,
-  zIndex: 21,
-};
 
 function MoreMenuItem({
   label,
@@ -426,22 +417,6 @@ export default function RoomPage({
   const [panel, setPanel] = useState<Panel>(null);
   const [keyReady, setKeyReady] = useState(false);
   const [mirrored, setMirrored] = useState(false);
-  const [overlayControlsVisible, setOverlayControlsVisible] = useState(true);
-  const overlayHideTimerRef = useRef<number | null>(null);
-
-  const revealOverlayControls = useCallback(() => {
-    setOverlayControlsVisible(true);
-    if (overlayHideTimerRef.current) window.clearTimeout(overlayHideTimerRef.current);
-    overlayHideTimerRef.current = window.setTimeout(() => setOverlayControlsVisible(false), 2800);
-  }, []);
-
-  useEffect(() => {
-    revealOverlayControls();
-    return () => {
-      if (overlayHideTimerRef.current) window.clearTimeout(overlayHideTimerRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const [raisedHands, setRaisedHands] = useState<Set<string>>(new Set());
   const [cohostLink, setCohostLink] = useState<string | null>(null);
 
@@ -690,19 +665,15 @@ export default function RoomPage({
       >
         <BreakoutListener roomName={roomName} name={name} />
         <RoomHeartbeat roomName={roomName} />
-        <div
-          style={{ flex: 1, minWidth: 0, position: "relative" }}
-          onClickCapture={revealOverlayControls}
-          onMouseMoveCapture={revealOverlayControls}
-          onTouchStartCapture={revealOverlayControls}
-        >
+        <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
           <VideoConference />
-          <Reactions senderName={name} raisedHands={raisedHands} setRaisedHands={setRaisedHands} />
-          <div className="marvie-extra-controls" style={HEADER_OVERLAY_STYLE}>
-            <AutoHideControls visible={overlayControlsVisible}>
-              <ExtraControls mirrored={mirrored} onToggleMirror={() => setMirrored((m) => !m)} />
-            </AutoHideControls>
-          </div>
+          <MergedControlBar
+            senderName={name}
+            raisedHands={raisedHands}
+            setRaisedHands={setRaisedHands}
+            mirrored={mirrored}
+            onToggleMirror={() => setMirrored((m) => !m)}
+          />
           <JoinRequestToast requests={pendingRequests} roomName={roomName} hostSecret={hostSecret} />
         </div>
         {panel === "chat" && <RoomChat roomName={roomName} senderName={name} />}

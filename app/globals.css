@@ -208,7 +208,8 @@ html {
   box-shadow: 0 6px 20px rgba(255, 61, 92, 0.4);
 }
 
-.lk-button[data-lk-source="screen_share"][data-lk-enabled="true"] {
+.lk-button[data-lk-source="screen_share"][data-lk-enabled="true"],
+.lk-button[data-lk-enabled="true"]:not([data-lk-source]) {
   background: linear-gradient(135deg, var(--accent-1), var(--accent-2)) !important;
   color: #fff !important;
   border-color: transparent !important;
@@ -227,6 +228,23 @@ html {
      bar (z-index: 20) since both are absolutely positioned just above the
      control bar — the reactions pill was visually blocking this dropdown. */
   z-index: 45 !important;
+}
+
+.marvie-more-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-0);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.marvie-more-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Mirror the local participant's own camera preview by default (self-view
@@ -268,14 +286,3 @@ html {
   }
 }
 
-@media (max-width: 480px) {
-  .marvie-extra-controls {
-    top: 8px !important;
-    right: 8px !important;
-  }
-
-  .marvie-extra-controls button {
-    padding: 0.35rem 0.5rem !important;
-    font-size: 0.72rem !important;
-  }
-}

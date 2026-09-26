@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import PwaRegister from "@/components/PwaRegister";
+import NativeBackButton from "@/components/NativeBackButton";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +45,7 @@ export default function RootLayout({
       <body>
         {children}
         <PwaRegister />
+        <NativeBackButton />
       </body>
     </html>
   );
