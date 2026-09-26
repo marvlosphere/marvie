@@ -2,6 +2,7 @@
 
 import "@livekit/components-styles";
 import { useEffect, useMemo, useRef, useState, use, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useRouter } from "next/navigation";
 import { LiveKitRoom, VideoConference } from "@livekit/components-react";
 import { ExternalE2EEKeyProvider, isE2EESupported } from "livekit-client";
@@ -119,10 +120,18 @@ function MoreMenu({
       </button>
       {open && (
         <>
-          <div
-            onClick={() => setOpen(false)}
-            style={{ position: "fixed", inset: 0, zIndex: 39 }}
-          />
+          {/* Portaled to document.body rather than rendered inline: the
+              header is a .glass-card with backdrop-filter, which creates a
+              new CSS containing block for fixed-position descendants — this
+              backdrop was being confined to the header's own small bounding
+              box instead of the full viewport, so clicking anywhere on the
+              actual video area (below the header) never reached it and the
+              menu stayed open. */}
+          {typeof document !== "undefined" &&
+            createPortal(
+              <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 39 }} />,
+              document.body
+            )}
           <div
             className="glass-card"
             style={{
