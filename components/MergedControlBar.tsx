@@ -287,10 +287,23 @@ export default function MergedControlBar({
 
   useEffect(() => {
     function onFullscreenChange() {
-      setIsFullscreen(!!document.fullscreenElement);
+      const active = !!document.fullscreenElement;
+      setIsFullscreen(active);
+      // Browser fullscreen alone still leaves the header and other-
+      // participants strip on screen (just without browser chrome) — this
+      // hides them too via CSS, for an actual edge-to-edge single-video
+      // view. Toggling a body class (rather than threading state through
+      // page.tsx) keeps this self-contained; it's undone automatically
+      // whenever fullscreen ends, by any of the usual routes (Esc, the F
+      // key, or "Exit full screen" in this same bar's More menu, which
+      // stays visible throughout since it isn't part of what gets hidden).
+      document.body.classList.toggle("marvie-focus-mode", active);
     }
     document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.body.classList.remove("marvie-focus-mode");
+    };
   }, []);
 
   useEffect(() => {

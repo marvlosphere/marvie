@@ -238,6 +238,20 @@ html {
   fill-opacity: 1 !important;
 }
 
+/* True edge-to-edge full screen: browser Fullscreen API alone only removes
+   browser chrome, it doesn't touch our own header or the other-participants
+   thumbnail strip. Toggled by MergedControlBar's fullscreenchange handler,
+   so it self-clears on every exit route (Esc, the F key, or the More menu's
+   own "Exit full screen" item — which stays visible, since the bottom
+   control bar isn't part of what this hides, keeping an exit reachable). */
+body.marvie-focus-mode header {
+  display: none !important;
+}
+
+body.marvie-focus-mode .lk-carousel {
+  display: none !important;
+}
+
 .lk-device-menu {
   background: rgba(18, 20, 32, 0.9) !important;
   backdrop-filter: blur(20px) saturate(140%);
