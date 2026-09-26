@@ -258,6 +258,17 @@ body.marvie-focus-mode header {
   display: none !important;
 }
 
+/* .lk-focus-layout ships with grid-template-columns: 1fr 5fr (carousel,
+   then the pinned tile). Just hiding .lk-carousel doesn't collapse that
+   reserved 1fr track — CSS Grid keeps the empty column allocated as long
+   as grid-template-columns says so, regardless of whether anything's
+   placed in it — which is exactly what left a large dead gradient-filled
+   gap next to a squeezed-looking tile. Collapsing the template to a single
+   column reclaims that space properly instead of just hiding a child. */
+body.marvie-focus-mode .lk-focus-layout {
+  grid-template-columns: 1fr !important;
+}
+
 body.marvie-focus-mode .lk-carousel {
   display: none !important;
 }
