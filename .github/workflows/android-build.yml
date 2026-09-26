@@ -11,12 +11,19 @@ on:
       - "android/**"
       - "capacitor.config.ts"
       - "lib/nativeScreenShare.ts"
+      # package.json/package-lock.json too — a new Capacitor plugin (native
+      # code) can be added there without touching any other watched path,
+      # as happened with @capacitor/app, silently skipping this workflow.
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/android-build.yml"
   pull_request:
     paths:
       - "android/**"
       - "capacitor.config.ts"
       - "lib/nativeScreenShare.ts"
+      - "package.json"
+      - "package-lock.json"
   workflow_dispatch: {}
 
 jobs:
