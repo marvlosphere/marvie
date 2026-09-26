@@ -323,13 +323,37 @@ export default function MergedControlBar({
     recorderRef.current?.stop();
   }, []);
 
+  // iOS Safari (and some in-app browsers) don't implement the Fullscreen API
+  // for arbitrary elements at all — only `document.fullscreenEnabled` tells
+  // you that reliably, since `requestFullscreen` can still exist as a
+  // function there and simply reject every time it's called. There's no way
+  // for a web page to hide Safari's own chrome (URL bar, tab bar) on iOS, so
+  // "true fullscreen" isn't achievable there regardless — but we can still
+  // give it the same edge-to-edge app layout (header + thumbnail strip
+  // hidden, single video filling the space) that real fullscreen gets,
+  // instead of the button doing nothing. Both paths funnel through this one
+  // helper so isFullscreen/the body class/the control-bar auto-hide all stay
+  // in sync no matter which mechanism is behind it.
+  const applyFocusMode = useCallback((next: boolean | ((prev: boolean) => boolean)) => {
+    setIsFullscreen((prev) => {
+      const value = typeof next === "function" ? (next as (p: boolean) => boolean)(prev) : next;
+      document.body.classList.toggle("marvie-focus-mode", value);
+      return value;
+    });
+  }, []);
+
   const toggleFullscreen = useCallback(() => {
+    const supportsFullscreen = typeof document !== "undefined" && document.fullscreenEnabled;
+    if (!supportsFullscreen) {
+      applyFocusMode((prev) => !prev);
+      return;
+    }
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     } else {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => applyFocusMode((prev) => !prev));
     }
-  }, []);
+  }, [applyFocusMode]);
 
   // Auto-hide the control bar in full screen after a few seconds of no
   // mouse/touch/keyboard activity, like Google Meet/YouTube — otherwise it
@@ -377,25 +401,22 @@ export default function MergedControlBar({
   }, [isFullscreen, controlsHidden, openPopover]);
 
   useEffect(() => {
+    // Browser fullscreen alone still leaves the header and other-
+    // participants strip on screen (just without browser chrome) — this
+    // hides them too via CSS, for an actual edge-to-edge single-video
+    // view. It's undone automatically whenever real fullscreen ends, by any
+    // of the usual routes (Esc, the F key, or "Exit full screen" in this
+    // same bar's More menu, which stays visible throughout since it isn't
+    // part of what gets hidden).
     function onFullscreenChange() {
-      const active = !!document.fullscreenElement;
-      setIsFullscreen(active);
-      // Browser fullscreen alone still leaves the header and other-
-      // participants strip on screen (just without browser chrome) — this
-      // hides them too via CSS, for an actual edge-to-edge single-video
-      // view. Toggling a body class (rather than threading state through
-      // page.tsx) keeps this self-contained; it's undone automatically
-      // whenever fullscreen ends, by any of the usual routes (Esc, the F
-      // key, or "Exit full screen" in this same bar's More menu, which
-      // stays visible throughout since it isn't part of what gets hidden).
-      document.body.classList.toggle("marvie-focus-mode", active);
+      applyFocusMode(!!document.fullscreenElement);
     }
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", onFullscreenChange);
       document.body.classList.remove("marvie-focus-mode");
     };
-  }, []);
+  }, [applyFocusMode]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
