@@ -165,6 +165,16 @@ html {
   background: var(--glass-bg) !important;
   backdrop-filter: blur(24px) saturate(140%) !important;
   box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.25) !important;
+  /* backdrop-filter makes this element its own stacking context. The
+     outside-click backdrop for our portaled popovers (MergedControlBar)
+     lives outside this context entirely (it has to, for full-viewport
+     coverage — see that component's comments), so without an explicit
+     z-index here the whole control bar — including our dropdown menu,
+     regardless of ITS OWN z-index — was being painted underneath that
+     backdrop and made unclickable, even though it was still visibly on
+     top. An explicit z-index here puts the whole context above it. */
+  position: relative !important;
+  z-index: 61 !important;
 }
 
 .lk-button,
