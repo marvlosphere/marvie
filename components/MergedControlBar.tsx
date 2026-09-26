@@ -225,6 +225,13 @@ export default function MergedControlBar({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // "Record this tab" is built on getDisplayMedia, same as screen share —
+  // mobile Chrome (and iOS Safari) don't implement it at all. Without this
+  // check the button just silently did nothing on phones, which looked like
+  // recording was "not working" with no explanation. It's not the only
+  // recording though: every call is also composite-recorded server-side
+  // automatically (see lib/egress.ts) regardless of this button or platform.
+  const [recordNotice, setRecordNotice] = useState(false);
 
   const togglePip = useCallback(async () => {
     const videos = Array.from(document.querySelectorAll("video")) as HTMLVideoElement[];
@@ -577,14 +584,24 @@ export default function MergedControlBar({
               <button
                 type="button"
                 onClick={() => {
+                  if (!canScreenShare) {
+                    setRecordNotice(true);
+                    window.setTimeout(() => setRecordNotice(false), 5000);
+                    return;
+                  }
                   if (recording) stopRecording();
                   else startRecording();
                   setOpenPopover(null);
                 }}
                 className="marvie-more-menu-item"
               >
-                {recording ? "Stop recording" : "Record this tab"}
+                {recording ? "Stop recording" : canScreenShare ? "Record this tab" : "Record this tab (unavailable)"}
               </button>
+              {recordNotice && (
+                <p style={{ fontSize: "0.72rem", color: "var(--text-1)", padding: "0.3rem 0.75rem 0.1rem", lineHeight: 1.4 }}>
+                  Tab recording isn&apos;t supported on this browser (mobile Chrome and Safari don&apos;t allow it).
+                </p>
+              )}
             </div>
         )}
       </div>
