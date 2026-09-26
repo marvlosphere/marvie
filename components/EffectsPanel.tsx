@@ -1,8 +1,9 @@
 "use client";
 
 import BackgroundEffects from "./BackgroundEffects";
+import PanelCloseButton from "@/components/PanelCloseButton";
 
-export default function EffectsPanel() {
+export default function EffectsPanel({ onClose }: { onClose: () => void }) {
   return (
     <div
       className="glass-card marvie-panel"
@@ -18,7 +19,19 @@ export default function EffectsPanel() {
       }}
     >
       <div>
-        <div style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: "0.5rem" }}>Background</div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontWeight: 600,
+            fontSize: "0.85rem",
+            marginBottom: "0.5rem",
+          }}
+        >
+          Background
+          <PanelCloseButton onClose={onClose} />
+        </div>
         <BackgroundEffects />
       </div>
     </div>

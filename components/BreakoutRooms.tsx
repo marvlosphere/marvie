@@ -5,6 +5,7 @@ import { useParticipants, useLocalParticipant } from "@livekit/components-react"
 import { useRouter } from "next/navigation";
 import { createSupabaseClient } from "@/lib/supabase";
 import { breakoutRoomName, parentRoomOf } from "@/lib/breakoutRooms";
+import PanelCloseButton from "@/components/PanelCloseButton";
 
 export { breakoutRoomName, parentRoomOf };
 
@@ -12,10 +13,12 @@ export default function BreakoutRooms({
   roomName,
   isHost,
   displayName,
+  onClose,
 }: {
   roomName: string;
   isHost: boolean;
   displayName: string;
+  onClose: () => void;
 }) {
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
@@ -73,7 +76,10 @@ export default function BreakoutRooms({
         gap: "0.75rem",
       }}
     >
-      <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>Breakout rooms</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>Breakout rooms</span>
+        <PanelCloseButton onClose={onClose} />
+      </div>
       {isHost ? (
         <>
           <label style={{ fontSize: "0.8rem", color: "var(--text-1)", display: "flex", flexDirection: "column", gap: "0.3rem" }}>

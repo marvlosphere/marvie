@@ -219,6 +219,25 @@ html {
   opacity: 0.7;
 }
 
+/* LiveKit's default camera-off placeholder is a flat near-black tile with a
+   barely-visible (25% opacity) person silhouette — reads as a dull dark
+   blob that clashes with the rest of the glassy purple/pink theme. Give it
+   a themed gradient background and a crisper, smaller icon instead. */
+.lk-participant-placeholder {
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.35), rgba(255, 92, 168, 0.28)) !important;
+}
+
+.lk-participant-placeholder svg {
+  width: 34% !important;
+  height: 34% !important;
+  padding: 0 !important;
+}
+
+.lk-participant-placeholder svg path {
+  fill: rgba(255, 255, 255, 0.9) !important;
+  fill-opacity: 1 !important;
+}
+
 .lk-device-menu {
   background: rgba(18, 20, 32, 0.9) !important;
   backdrop-filter: blur(20px) saturate(140%);

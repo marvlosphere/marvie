@@ -98,10 +98,17 @@ export default function MergedControlBar({
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const portalNode = useControlBarPortalNode();
 
+  // One shared "which popover is open" state instead of independent booleans
+  // per button: opening one now closes any other automatically, and a
+  // single full-screen backdrop closes whichever is open on outside click
+  // instead of requiring the same trigger button to be pressed again.
+  const [openPopover, setOpenPopover] = useState<"screenShare" | "reactions" | "more" | null>(null);
+  const togglePopover = (name: "screenShare" | "reactions" | "more") =>
+    setOpenPopover((cur) => (cur === name ? null : name));
+
   // --- Reactions (emoji burst + raise hand) ---
   const [floating, setFloating] = useState<FloatingEmoji[]>([]);
   const [handRaised, setHandRaised] = useState(false);
-  const [reactionsOpen, setReactionsOpen] = useState(false);
   const nextId = useRef(0);
 
   const { send } = useDataChannel("reactions", (msg) => {
@@ -136,7 +143,7 @@ export default function MergedControlBar({
       }, 2200);
       const payload: ReactionPayload = { type: "emoji", emoji, from: senderName };
       send(new TextEncoder().encode(JSON.stringify(payload)), { reliable: true });
-      setReactionsOpen(false);
+      setOpenPopover(null);
     },
     [send, senderName]
   );
@@ -168,7 +175,6 @@ export default function MergedControlBar({
 
   // --- Screen share (browser fallback notice + native Android bridge) ---
   const canScreenShare = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
-  const [screenShareNotice, setScreenShareNotice] = useState(false);
   const nativeAndroid = isNativeAndroid();
   const [nativeSharing, setNativeSharing] = useState(false);
   const [nativeShareBusy, setNativeShareBusy] = useState(false);
@@ -217,7 +223,6 @@ export default function MergedControlBar({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
 
   const togglePip = useCallback(async () => {
     const videos = Array.from(document.querySelectorAll("video")) as HTMLVideoElement[];
@@ -329,12 +334,12 @@ export default function MergedControlBar({
           <button
             className="lk-button"
             type="button"
-            onClick={() => setScreenShareNotice((v) => !v)}
+            onClick={() => togglePopover("screenShare")}
             title="Screen share unavailable on this browser"
           >
             <span style={iconButtonStyle}>🖥️</span>
           </button>
-          {screenShareNotice && (
+          {openPopover === "screenShare" && (
             <div
               className="glass-card"
               style={{
@@ -355,7 +360,7 @@ export default function MergedControlBar({
               <button
                 className="btn-ghost"
                 type="button"
-                onClick={() => setScreenShareNotice(false)}
+                onClick={() => setOpenPopover(null)}
                 style={{ display: "block", marginTop: "0.5rem", padding: "0.3rem 0.6rem", fontSize: "0.75rem" }}
               >
                 Got it
@@ -369,12 +374,12 @@ export default function MergedControlBar({
         <button
           className="lk-button"
           type="button"
-          onClick={() => setReactionsOpen((v) => !v)}
+          onClick={() => togglePopover("reactions")}
           title="Send a reaction"
         >
           <span style={iconButtonStyle}>😊</span>
         </button>
-        {reactionsOpen && (
+        {openPopover === "reactions" && (
           <div
             className="glass-card"
             style={{
@@ -423,13 +428,11 @@ export default function MergedControlBar({
       </button>
 
       <div style={{ position: "relative" }}>
-        <button className="lk-button" type="button" onClick={() => setMoreOpen((v) => !v)} title="More options">
+        <button className="lk-button" type="button" onClick={() => togglePopover("more")} title="More options">
           <span style={iconButtonStyle}>⋮</span>
         </button>
-        {moreOpen && (
-          <>
-            <div onClick={() => setMoreOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 59 }} />
-            <div
+        {openPopover === "more" && (
+          <div
               className="glass-card"
               style={{
                 position: "absolute",
@@ -448,7 +451,7 @@ export default function MergedControlBar({
                 type="button"
                 onClick={() => {
                   toggleFullscreen();
-                  setMoreOpen(false);
+                  setOpenPopover(null);
                 }}
                 className="marvie-more-menu-item"
               >
@@ -458,7 +461,7 @@ export default function MergedControlBar({
                 type="button"
                 onClick={() => {
                   togglePip();
-                  setMoreOpen(false);
+                  setOpenPopover(null);
                 }}
                 className="marvie-more-menu-item"
               >
@@ -468,7 +471,7 @@ export default function MergedControlBar({
                 type="button"
                 onClick={() => {
                   onToggleMirror();
-                  setMoreOpen(false);
+                  setOpenPopover(null);
                 }}
                 className="marvie-more-menu-item"
               >
@@ -479,14 +482,13 @@ export default function MergedControlBar({
                 onClick={() => {
                   if (recording) stopRecording();
                   else startRecording();
-                  setMoreOpen(false);
+                  setOpenPopover(null);
                 }}
                 className="marvie-more-menu-item"
               >
                 {recording ? "Stop recording" : "Record this tab"}
               </button>
             </div>
-          </>
         )}
       </div>
     </>
@@ -495,6 +497,16 @@ export default function MergedControlBar({
   return (
     <>
       {portalNode ? createPortal(bar, portalNode) : null}
+      {/* Rendered here rather than inside the portaled `bar` — .lk-control-bar
+          has backdrop-filter applied, which creates a new CSS containing
+          block for fixed-position descendants, so a backdrop nested inside
+          it would only cover the control bar's own bounding box instead of
+          the true viewport. Living outside the portal keeps it relative to
+          the real viewport, so clicking anywhere on screen closes whichever
+          popover is open. */}
+      {openPopover && (
+        <div onClick={() => setOpenPopover(null)} style={{ position: "fixed", inset: 0, zIndex: 59 }} />
+      )}
       <ReactionBurst floating={floating} />
     </>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createSupabaseClient } from "@/lib/supabase";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import PanelCloseButton from "@/components/PanelCloseButton";
 
 type StrokePoint = { x: number; y: number };
 type StrokeEvent = { type: "start" | "draw" | "end"; point?: StrokePoint; color: string; strokeId: string };
@@ -10,7 +11,7 @@ type ClearEvent = { type: "clear" };
 
 const COLORS = ["#f5f6fb", "#7c5cff", "#38bdf8", "#ef4444", "#22c55e", "#f59e0b"];
 
-export default function Whiteboard({ roomName }: { roomName: string }) {
+export default function Whiteboard({ roomName, onClose }: { roomName: string; onClose: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const drawing = useRef(false);
@@ -162,6 +163,7 @@ export default function Whiteboard({ roomName }: { roomName: string }) {
           <button className="btn-ghost" style={{ padding: "0.25rem 0.5rem", fontSize: "0.72rem", marginLeft: "0.4rem" }} onClick={handleClear}>
             Clear
           </button>
+          <PanelCloseButton onClose={onClose} />
         </div>
       </div>
       <div style={{ flex: 1, minHeight: 320, background: "#0d1020" }}>

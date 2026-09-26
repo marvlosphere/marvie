@@ -676,7 +676,7 @@ export default function RoomPage({
           />
           <JoinRequestToast requests={pendingRequests} roomName={roomName} hostSecret={hostSecret} />
         </div>
-        {panel === "chat" && <RoomChat roomName={roomName} senderName={name} />}
+        {panel === "chat" && <RoomChat roomName={roomName} senderName={name} onClose={() => togglePanel(panel)} />}
         {panel === "people" && (
           <ModerationPanel
             roomName={roomName}
@@ -684,14 +684,25 @@ export default function RoomPage({
             hostSecret={hostSecret}
             raisedHands={raisedHands}
             requests={pendingRequests}
+            onClose={() => togglePanel(panel)}
           />
         )}
         {panel === "polls" && (
-          <Polls roomName={parentRoomOf(roomName) ?? roomName} identity={identityRef.current ?? name} isHost={isHost} hostSecret={hostSecret} />
+          <Polls
+            roomName={parentRoomOf(roomName) ?? roomName}
+            identity={identityRef.current ?? name}
+            isHost={isHost}
+            hostSecret={hostSecret}
+            onClose={() => togglePanel(panel)}
+          />
         )}
-        {panel === "whiteboard" && <Whiteboard roomName={parentRoomOf(roomName) ?? roomName} />}
-        {panel === "breakout" && <BreakoutRooms roomName={roomName} isHost={isHost} displayName={name} />}
-        {panel === "effects" && <EffectsPanel />}
+        {panel === "whiteboard" && (
+          <Whiteboard roomName={parentRoomOf(roomName) ?? roomName} onClose={() => togglePanel(panel)} />
+        )}
+        {panel === "breakout" && (
+          <BreakoutRooms roomName={roomName} isHost={isHost} displayName={name} onClose={() => togglePanel(panel)} />
+        )}
+        {panel === "effects" && <EffectsPanel onClose={() => togglePanel(panel)} />}
       </LiveKitRoom>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createSupabaseClient } from "@/lib/supabase";
+import PanelCloseButton from "@/components/PanelCloseButton";
 
 type ChatMessage = {
   id: number;
@@ -14,9 +15,11 @@ type ChatMessage = {
 export default function RoomChat({
   roomName,
   senderName,
+  onClose,
 }: {
   roomName: string;
   senderName: string;
+  onClose: () => void;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -85,8 +88,19 @@ export default function RoomChat({
         overflow: "hidden",
       }}
     >
-      <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid var(--glass-border)", fontWeight: 600, fontSize: "0.9rem" }}>
+      <div
+        style={{
+          padding: "0.75rem 1rem",
+          borderBottom: "1px solid var(--glass-border)",
+          fontWeight: 600,
+          fontSize: "0.9rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         Room chat
+        <PanelCloseButton onClose={onClose} />
       </div>
       <div ref={listRef} style={{ flex: 1, overflowY: "auto", padding: "0.75rem 1rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
         {messages.length === 0 && (

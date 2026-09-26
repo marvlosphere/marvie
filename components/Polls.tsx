@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseClient } from "@/lib/supabase";
+import PanelCloseButton from "@/components/PanelCloseButton";
 
 type Poll = {
   id: number;
@@ -18,11 +19,13 @@ export default function Polls({
   identity,
   isHost,
   hostSecret,
+  onClose,
 }: {
   roomName: string;
   identity: string;
   isHost: boolean;
   hostSecret: string | null;
+  onClose: () => void;
 }) {
   const supabase = useMemo(() => createSupabaseClient(), []);
   const [polls, setPolls] = useState<Poll[]>([]);
@@ -116,11 +119,14 @@ export default function Polls({
     >
       <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid var(--glass-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>Polls</span>
-        {isHost && (
-          <button className="btn-ghost" style={{ padding: "0.3rem 0.5rem", fontSize: "0.75rem" }} onClick={() => setCreating((c) => !c)}>
-            {creating ? "Cancel" : "New poll"}
-          </button>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+          {isHost && (
+            <button className="btn-ghost" style={{ padding: "0.3rem 0.5rem", fontSize: "0.75rem" }} onClick={() => setCreating((c) => !c)}>
+              {creating ? "Cancel" : "New poll"}
+            </button>
+          )}
+          <PanelCloseButton onClose={onClose} />
+        </div>
       </div>
 
       {creating && (

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParticipants, useLocalParticipant } from "@livekit/components-react";
 import type { JoinRequest } from "@/hooks/usePendingJoinRequests";
+import PanelCloseButton from "@/components/PanelCloseButton";
 
 export default function ModerationPanel({
   roomName,
@@ -10,12 +11,14 @@ export default function ModerationPanel({
   hostSecret,
   raisedHands,
   requests,
+  onClose,
 }: {
   roomName: string;
   isHost: boolean;
   hostSecret: string | null;
   raisedHands: Set<string>;
   requests: JoinRequest[];
+  onClose: () => void;
 }) {
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
@@ -110,11 +113,14 @@ export default function ModerationPanel({
 
       <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid var(--glass-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>People ({participants.length})</span>
-        {isHost && (
-          <button className="btn-ghost" style={{ padding: "0.3rem 0.5rem", fontSize: "0.75rem" }} disabled={busy === "__all__"} onClick={muteAll}>
-            Mute all
-          </button>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+          {isHost && (
+            <button className="btn-ghost" style={{ padding: "0.3rem 0.5rem", fontSize: "0.75rem" }} disabled={busy === "__all__"} onClick={muteAll}>
+              Mute all
+            </button>
+          )}
+          <PanelCloseButton onClose={onClose} />
+        </div>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "0.5rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
         {participants.map((p) => {
