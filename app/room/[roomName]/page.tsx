@@ -476,6 +476,24 @@ export default function RoomPage({
   const keyProvider = useMemo(() => (e2eeSupported ? new ExternalE2EEKeyProvider() : null), [e2eeSupported]);
   const worker = useMemo(() => (e2eeSupported ? new Worker("/e2ee-worker.js") : null), [e2eeSupported]);
 
+  // Both default to false in livekit-client. Without them, every participant
+  // decodes every remote video track at its full published resolution
+  // regardless of how small it's actually rendered, and the server forwards
+  // every simulcast layer whether or not any subscriber needs it — on a
+  // weaker machine (or in a bigger call) that's the difference between
+  // smooth video and exactly the kind of lag reported on a lower-end PC.
+  // adaptiveStream requests/decodes only the resolution each track is
+  // actually displayed at (and pauses off-screen tracks); dynacast stops
+  // publishing simulcast layers nobody's subscribed to.
+  const roomOptions = useMemo(
+    () => ({
+      adaptiveStream: true,
+      dynacast: true,
+      ...(e2eeSupported && keyProvider && worker ? { e2ee: { keyProvider, worker } } : {}),
+    }),
+    [e2eeSupported, keyProvider, worker]
+  );
+
   // Set up the shared E2EE passphrase from the URL fragment (never sent to the server).
   useEffect(() => {
     if (!e2eeSupported || !keyProvider) {
@@ -668,7 +686,7 @@ export default function RoomPage({
         token={token}
         serverUrl={serverUrl}
         data-lk-theme="default"
-        options={e2eeSupported && keyProvider && worker ? { e2ee: { keyProvider, worker } } : {}}
+        options={roomOptions}
         className={mirrored ? undefined : "marvie-no-mirror"}
         style={{ flex: 1, minHeight: 0, background: "transparent", display: "flex", overflow: "hidden", position: "relative" }}
         onDisconnected={() => router.push("/")}
